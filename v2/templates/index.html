@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Paper Related Work Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .paper {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+        }
+        .paper-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .paper-title a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .paper-title a:hover {
+            text-decoration: underline;
+        }
+        .paper-meta {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .similarity-score {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .note {
+            font-style: italic;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .abstract-snippet {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .query-tag {
+            display: inline-block;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Academic Paper Related Work Finder</h1>
+        <p>Enter your research abstract and find related academic papers using AI-powered search and similarity scoring.</p>
+
+        <form id="searchForm">
+            <div class="input-group">
+                <label for="apiKey">OpenAI API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your OpenAI API key" required>
+            </div>
+
+            <div class="input-group">
+                <label for="abstract">Research Abstract or Idea:</label>
+                <textarea id="abstract" placeholder="Paste your research abstract or idea here..." required></textarea>
+            </div>
+
+            <button type="submit">Find Related Work</button>
+        </form>
+
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="loading" class="loading">Running search...</div>
+
+        <div id="results" class="results" style="display: none;">
+            <h2>Results</h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const abstract = document.getElementById('abstract').value.trim();
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+
+            // Clear previous results and errors
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+
+            // Validate inputs
+            if (!apiKey) {
+                showError('OpenAI API key is required');
+                return;
+            }
+
+            if (!abstract) {
+                showError('Abstract is required');
+                return;
+            }
+
+            // Show loading state
+            loadingDiv.style.display = 'block';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Searching...';
+
+            try {
+                const response = await fetch('/related-work', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        abstract: abstract,
+                        openai_api_key: apiKey
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Server error');
+                }
+
+                displayResults(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                // Hide loading state
+                loadingDiv.style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Find Related Work';
+            }
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const containerDiv = document.getElementById('resultsContainer');
+
+            if (data.results.length === 0) {
+                containerDiv.innerHTML = '<p>No related papers found with similarity score > 70.</p>';
+            } else {
+                containerDiv.innerHTML = data.results.map(result => `
+                    <div class="paper">
+                        <div class="query-tag">Query: ${escapeHtml(result.query)}</div>
+                        <div class="paper-title">
+                            <a href="${escapeHtml(result.paper.url)}" target="_blank">${escapeHtml(result.paper.title)}</a>
+                        </div>
+                        <div class="paper-meta">
+                            <strong>Authors:</strong> ${escapeHtml(result.paper.authors.join(', '))} |
+                            <strong>Venue:</strong> ${escapeHtml(result.paper.venue)} |
+                            <strong>Year:</strong> ${escapeHtml(result.paper.year)}
+                        </div>
+                        <div class="similarity-score">Similarity: ${result.similarity_score}</div>
+                        <div class="note"><strong>Note:</strong> ${escapeHtml(result.note)}</div>
+                        <div class="abstract-snippet">
+                            <strong>Abstract:</strong> ${escapeHtml(result.paper.abstract.substring(0, 300))}${result.paper.abstract.length > 300 ? '...' : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            resultsDiv.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
