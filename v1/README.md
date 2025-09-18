@@ -20,7 +20,7 @@ An intelligent research assistant that finds related academic papers based on ab
 
 1. **Clone and navigate to the project**:
    ```bash
-   cd aiagentdemo
+   cd project_folder
    ```
 
 2. **Run the setup script**:
